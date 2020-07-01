@@ -63,21 +63,11 @@ const typeDefs = gql`
     }
 
     """
-    A property of a page in a database.
+    The format of a page
     """
-    type Property{
-        """
-        The name of the property.
-        """
-        name: String!
-        """
-        The type of property.
-        """
-        type: String!
-        """
-        The options of the property. Type "Unknown" because schema is dynamic.
-        """
-        options: [Unknown]
+    type Format{
+        cover: String
+        font: String
     }
 
     """
@@ -87,10 +77,11 @@ const typeDefs = gql`
         properties: Unknown
         createdTime: Int
         lastEditedTime: Int
-        format: Unknown
+        format: Format
     }
 
     type Page{
+        id: String
         metadata: Metadata
         title: String
         properties: Unknown
@@ -98,14 +89,14 @@ const typeDefs = gql`
     }
 
     type Collection{
-        schema: [Property!]
+        schema: Unknown
         pages: [Page!]
     }
 
     input Filter{
         property: String!
         operator: String!
-        value: String
+        value: Unknown
     }
 
     type Query{
@@ -114,41 +105,50 @@ const typeDefs = gql`
         ): Page
         fetchCollection(
             collectionId: String!
-            collectionView: String!
-            filter: Filter
+            collectionViewId: String!
+            filters: [Filter]
+            cursor: String
+            limit: String
         ): Collection
     }
 `;
 
 const resolvers = {
-		Query: {
-			fetchPage: async (_, args, context) => {
-				const res = await got.post('http://localhost:8081/fetchPage', {
-					json: {
-						pageId: args.pageId
-					},
-					headers: {
-						"Token": context.token
-					}
-				})
-				return JSON.parse(res.body)
-			},
-		},
-		BlockContent: {
-			"__resolveType": (item) => item.type
-		}
-	}
+        Query: {
+            fetchPage: async (_, args, context) => {
+                const res = await got.post('http://localhost:8081/fetchPage', {
+                    json: args,
+                    headers: {
+                        "Token": context.token
+                    }
+                })
+                return JSON.parse(res.body)
+            },
+            fetchCollection: async (_, args, context) => {
+                const res = await got.post('http://localhost:8081/fetchCollection', {
+                    json: args,
+                    headers: {
+                        "Token": context.token
+                    }
+                })
+                return JSON.parse(res.body)
+            }
+        },
+        BlockContent: {
+            "__resolveType": (item) => item.type
+        }
+    }
 ;
 
 const server = new ApolloServer({
-	typeDefs,
-	resolvers,
-	context: ({req}) => ({
-		token: req.headers.token
-	})
+    typeDefs,
+    resolvers,
+    context: ({req}) => ({
+        token: req.headers.token
+    })
 });
 
 // The `listen` method launches a web server.
 server.listen().then(({url}) => {
-	console.log(`🚀  Server ready at ${url}`);
+    console.log(`🚀  Server ready at ${url}`);
 });
